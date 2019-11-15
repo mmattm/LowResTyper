@@ -39,26 +39,30 @@ byte[][] buffers;
 boolean[] buffer_flags;
 int currentThread = 0;
 
+boolean skipSerialScan = false; // Changed to true for skipping scan process
+
 void setup() {
   size(1440, 420, P2D);
   noSmooth();
   textFont(loadFont("mono.vlw"));
-  
+
   tex = createGraphics(NUM_TILES_X * MATRIX_WIDTH, NUM_TILES_Y * MATRIX_HEIGHT, P2D);
   manager = new LetterManager();
 
   // Init serial(s)
-  serials = new ArrayList<Serial>();
-  scanSerial();
-  // serial = new Serial(this, "COM3"); // Windows
+  if (!skipSerialScan) {
+    serials = new ArrayList<Serial>();
+    scanSerial();
 
-  // Init buffer(s) and flag(s)
-  buffers = new byte[serials.size()][];
-  buffer_flags = new boolean[serials.size()];
+    // serial = new Serial(this, "COM3"); // Windows
 
-  for (int k = 0; k < serials.size(); k++) 
-    buffer_flags[k] = true;
+    // Init buffer(s) and flag(s)
+    buffers = new byte[serials.size()][];
+    buffer_flags = new boolean[serials.size()];
 
+    for (int k = 0; k < serials.size(); k++) 
+      buffer_flags[k] = true;
+  }
 
   folderRetrieve(); //Retrieve images from folders
   setupGUI(); // Init GUI
@@ -75,38 +79,40 @@ void draw() {
   tex.endDraw();
   tex.loadPixels();
 
-  if (serials.size() > 0) {
-    int even_split = ceil((float)NUM_TILES/serials.size()); //serial size instead
-    int split = floor((float)NUM_TILES/serials.size()); //serial size instead
+  if (!skipSerialScan) {
+    if (serials.size() > 0) {
+      int even_split = ceil((float)NUM_TILES/serials.size()); //serial size instead
+      int split = floor((float)NUM_TILES/serials.size()); //serial size instead
 
-    for (int k = 0; k < serials.size(); k++) {
-      if (serials.get(k) != null) {
-        int start_range = k == 0 ? 0 : even_split + ((k-1) * split);
-        int end_range = even_split + (k * split);
+      for (int k = 0; k < serials.size(); k++) {
+        if (serials.get(k) != null) {
+          int start_range = k == 0 ? 0 : even_split + ((k-1) * split);
+          int end_range = even_split + (k * split);
 
-        int buffer_length = (end_range-start_range) * MATRIX_WIDTH * MATRIX_HEIGHT * NUM_CHANNELS;
+          int buffer_length = (end_range-start_range) * MATRIX_WIDTH * MATRIX_HEIGHT * NUM_CHANNELS;
 
-        buffers[k] = new byte[buffer_length];
+          buffers[k] = new byte[buffer_length];
 
-        int idx = 0;
-        for (int i=start_range; i<end_range; i++) {
-          int x_index = i % NUM_TILES_X;
-          int y_index = (floor(i/NUM_TILES_X));
-          PImage tmp = tex.get(x_index * MATRIX_WIDTH, y_index * MATRIX_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT);
+          int idx = 0;
+          for (int i=start_range; i<end_range; i++) {
+            int x_index = i % NUM_TILES_X;
+            int y_index = (floor(i/NUM_TILES_X));
+            PImage tmp = tex.get(x_index * MATRIX_WIDTH, y_index * MATRIX_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT);
 
-          for (color c : tmp.pixels) {
-            if (raster)
-              c = brightness(c) > raster_threshold ? color(255) : color(0);
-            buffers[k][idx++] = (byte)(c >> 16 & 0xFF);
-            buffers[k][idx++] = (byte)(c >> 8 & 0xFF);
-            buffers[k][idx++] = (byte)(c & 0xFF);
+            for (color c : tmp.pixels) {
+              if (raster)
+                c = brightness(c) > raster_threshold ? color(255) : color(0);
+              buffers[k][idx++] = (byte)(c >> 16 & 0xFF);
+              buffers[k][idx++] = (byte)(c >> 8 & 0xFF);
+              buffers[k][idx++] = (byte)(c & 0xFF);
+            }
           }
-        }
-        
-        if (buffer_flags[k]) {
-          buffer_flags[k] = false;
-          currentThread = k;
-          thread("serialWrite"); 
+
+          if (buffer_flags[k]) {
+            buffer_flags[k] = false;
+            currentThread = k;
+            thread("serialWrite");
+          }
         }
       }
     }
@@ -168,7 +174,7 @@ void keyPressed()
   } else if (key == ' ') {
     manager.addLetter("-");
   } else if (Character.isLetter(key) || Character.isDigit(key) || key == '\'') {
-    
+
     String ck = key == '\'' ? "'": stripAccents(Character.toString(key).toUpperCase());
     manager.addLetter(ck);
   }
