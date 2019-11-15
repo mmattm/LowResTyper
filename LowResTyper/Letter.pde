@@ -7,7 +7,7 @@ public class Letter extends Key {
   public Letter(String _id)
   {
     super(_id);
-    println("add letter: " + id);
+    println("Add symbol: " + id);
   }
 
   void update()
@@ -25,8 +25,7 @@ public class Letter extends Key {
 
   void display(PGraphics target, PVector position)
   {
-    PVector center = single_mode ? new PVector((NUM_TILES_X*MATRIX_WIDTH)/2, (NUM_TILES_Y*MATRIX_HEIGHT)/2) : new PVector(position.x + (MATRIX_WIDTH/2 - gliph_w/2), position.y + (MATRIX_HEIGHT/2 - gliph_h/2));
-
+    PVector center = new PVector(position.x + (MATRIX_WIDTH/2 - gliph_w/2), position.y + (MATRIX_HEIGHT/2 - gliph_h/2));
     target.image(font_table.get(id.charAt(0)), center.x, center.y);
 
     if (sequences.get(id.toLowerCase()) != null) {
@@ -36,6 +35,11 @@ public class Letter extends Key {
 
   void sync() {
     anim_pos = 0;
+  }
+
+  void syncKinetic(int position) {
+    if (sequences.get(id.toLowerCase()) != null)
+      anim_pos = (anim_pos + (position * kinetic_delay)) % sequences.get(id.toLowerCase()).size()-1;
   }
 
   boolean isEnded() {

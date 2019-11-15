@@ -14,13 +14,10 @@ class LetterManager {
 
   void addLetter(String id)
   {
-    if (single_mode) {
-      keys = new ArrayList<Key>();
-      Key symbol = new Letter(id);
-      keys.add(symbol);
-    } else {
-      if (keys.size() <= max_keys)
-        keys.add(id.equals("-") ? new Space(id) : new Letter(id));
+    if (keys.size() <= max_keys) {
+      keys.add(id.equals("-") ? new Space(id) : new Letter(id));
+      if (kinetic)
+        syncKinetic();
     }
   }
 
@@ -66,9 +63,7 @@ class LetterManager {
     //LETTERS
     last_element_index = 0;
     if (smooth_scrolling && keys.size() > 2) {
-      
       float x = 0;
-      
       for (int i=0; i<smooth_scrolling_clones; i++) {
         for (int k = 0; k < keys.size(); k++) {
           PVector keyPosition = new PVector((k* MATRIX_WIDTH) + x -pos_offset, 0);
@@ -104,6 +99,13 @@ class LetterManager {
   {
     for (int k = 0; k < keys.size(); k++) {
       keys.get(k).sync();
+    }
+  }
+
+  void syncKinetic()
+  {
+    for (int k = 0; k < keys.size(); k++) {
+      keys.get(k).syncKinetic(k);
     }
   }
 }

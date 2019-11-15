@@ -1,6 +1,5 @@
 import controlP5.*;
 import processing.serial.*;
-import processing.video.*;
 import java.text.Normalizer;
 
 final int NUM_TILES_X   = 10; // The number of tiles, make sure that the NUM_TILES const
@@ -27,27 +26,39 @@ HashMap<String, ArrayList> sequences = new HashMap<String, ArrayList>();
 
 PApplet parent = this;
 // GUI options
-Boolean single_mode = false;
 Boolean raster = false;
 int raster_threshold = 100;
 
 ControlP5 cp5;
 boolean synced = false;
 boolean smooth_scrolling = false;
+boolean kinetic = false;
+int kinetic_delay = 20;
+
+byte[][] buffers;
+boolean[] buffer_flags;
+int currentThread = 0;
 
 void setup() {
-  size(1440, 360, JAVA2D);
+  size(1440, 420, P2D);
   noSmooth();
-  //frameRate(30); // Simulate final frameRate
   textFont(loadFont("mono.vlw"));
-
-  tex = createGraphics(NUM_TILES_X * MATRIX_WIDTH, NUM_TILES_Y * MATRIX_HEIGHT, JAVA2D);
+  
+  tex = createGraphics(NUM_TILES_X * MATRIX_WIDTH, NUM_TILES_Y * MATRIX_HEIGHT, P2D);
   manager = new LetterManager();
 
   // Init serial(s)
-  serials = new ArrayList();
+  serials = new ArrayList<Serial>();
   scanSerial();
   // serial = new Serial(this, "COM3"); // Windows
+
+  // Init buffer(s) and flag(s)
+  buffers = new byte[serials.size()][];
+  buffer_flags = new boolean[serials.size()];
+
+  for (int k = 0; k < serials.size(); k++) 
+    buffer_flags[k] = true;
+
 
   folderRetrieve(); //Retrieve images from folders
   setupGUI(); // Init GUI
@@ -74,9 +85,10 @@ void draw() {
         int end_range = even_split + (k * split);
 
         int buffer_length = (end_range-start_range) * MATRIX_WIDTH * MATRIX_HEIGHT * NUM_CHANNELS;
-        byte[] buffer = new byte[buffer_length];
-        int idx = 0;
 
+        buffers[k] = new byte[buffer_length];
+
+        int idx = 0;
         for (int i=start_range; i<end_range; i++) {
           int x_index = i % NUM_TILES_X;
           int y_index = (floor(i/NUM_TILES_X));
@@ -85,14 +97,17 @@ void draw() {
           for (color c : tmp.pixels) {
             if (raster)
               c = brightness(c) > raster_threshold ? color(255) : color(0);
-            buffer[idx++] = (byte)(c >> 16 & 0xFF);
-            buffer[idx++] = (byte)(c >> 8 & 0xFF);
-            buffer[idx++] = (byte)(c & 0xFF);
+            buffers[k][idx++] = (byte)(c >> 16 & 0xFF);
+            buffers[k][idx++] = (byte)(c >> 8 & 0xFF);
+            buffers[k][idx++] = (byte)(c & 0xFF);
           }
         }
-
-        serials.get(k).write('*');      // The 'data' command
-        serials.get(k).write(buffer);      // ...and the pixel values
+        
+        if (buffer_flags[k]) {
+          buffer_flags[k] = false;
+          currentThread = k;
+          thread("serialWrite"); 
+        }
       }
     }
   }
@@ -152,15 +167,16 @@ void keyPressed()
     manager.removeLetter();
   } else if (key == ' ') {
     manager.addLetter("-");
-  } else if (Character.isLetter(key)) {
-    String ck = stripAccents(Character.toString(key).toUpperCase());
+  } else if (Character.isLetter(key) || Character.isDigit(key) || key == '\'') {
+    
+    String ck = key == '\'' ? "'": stripAccents(Character.toString(key).toUpperCase());
     manager.addLetter(ck);
   }
 }
 
-public static String stripAccents(String s)
-{
-  s = Normalizer.normalize(s, Normalizer.Form.NFD);
-  s = s.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
-  return s;
+void serialWrite() {
+  int thread = currentThread;
+  serials.get(thread).write('*');      // The 'data' command
+  serials.get(thread).write(buffers[thread]);      // ...and the pixel values
+  buffer_flags[thread] = true;
 }
