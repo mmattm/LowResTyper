@@ -53,7 +53,8 @@ void setup() {
   if (!skipSerialScan) {
     serials = new ArrayList<Serial>();
     scanSerial();
-
+    
+    Collections.reverse(serials); // Reverse Serial
     // serial = new Serial(this, "COM3"); // Windows
 
     // Init buffer(s) and flag(s)

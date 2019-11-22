@@ -11,7 +11,7 @@ void setupGUI() {
   cp5.addToggle("smooth_scrolling").setPosition(20, oy + space).setSize(20, 20).setCaptionLabel("Smooth Scrolling");
   cp5.addSlider("scroll_speed").setPosition(20, oy + space*1.75).setSize(80, 10).setRange(40, 5).setCaptionLabel("Speed").setSliderMode(0);
   cp5.addToggle("raster").setPosition(20, oy + space*2.5).setSize(20, 20).setCaptionLabel("Rasterize");
-  cp5.addSlider("raster_threshold").setPosition(20, oy + space*3.25).setSize(80, 10).setRange(255, 50).setCaptionLabel("Threshold").setSliderMode(0);
+  cp5.addSlider("raster_threshold").setPosition(20, oy + space*3.25).setSize(80, 10).setRange(255, 10).setCaptionLabel("Threshold").setSliderMode(0);
   cp5.addToggle("kinetic").setPosition(20, oy + space*4).setSize(20, 20).setCaptionLabel("Kinetic");
   //cp5.addSlider("kinetic_delay").setPosition(20, oy + space*4.75).setSize(80, 10).setRange(60, 0).setCaptionLabel("Delay").setSliderMode(0).setValue(kinetic_delay);
 
